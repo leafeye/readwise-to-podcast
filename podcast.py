@@ -6,7 +6,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from notebooklm import NotebookLMClient
+from notebooklm import NotebookLMClient, RPCTimeoutError
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ async def try_download_podcast(
             max_interval=POLL_INTERVAL,
             timeout=POLL_TIMEOUT if wait else POLL_INTERVAL * 2,
         )
-    except TimeoutError:
+    except (TimeoutError, RPCTimeoutError):
         logger.info(f"Notebook {notebook_id} still generating, will retry later")
         return None
 
