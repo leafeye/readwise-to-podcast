@@ -4,6 +4,10 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import boto3
 from feedgen.feed import FeedGenerator
 
@@ -64,11 +68,11 @@ def generate_feed(public_url: str, episode_size: int) -> bytes:
     episode_url = f"{public_url}/{R2_EPISODES_PREFIX}{EPISODE_FILE.name}"
     fe = fg.add_entry()
     fe.id(episode_url)
+    fe.link(href=episode_url)
     fe.title("Test Episode — Readwise Podcast PoC")
     fe.description("Proof of concept: eerste automatisch gegenereerde aflevering.")
     fe.published(datetime(2026, 2, 27, tzinfo=timezone.utc))
     fe.enclosure(episode_url, str(episode_size), "audio/mpeg")
-    fe.load_extension("podcast")
     fe.podcast.itunes_duration("24:00")
 
     return fg.rss_str(pretty=True)
