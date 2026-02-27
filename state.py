@@ -10,9 +10,23 @@ EPISODES_FILE = Path("episodes.json")
 
 
 @dataclass
+class PendingNotebook:
+    """A notebook where audio generation was started but not yet downloaded."""
+    article_id: str
+    notebook_id: str
+    task_id: str
+    title: str
+    author: str
+    summary: str
+    source_url: str
+    started_at: str
+
+
+@dataclass
 class State:
     last_run: str | None = None
     processed_articles: list[str] = field(default_factory=list)
+    pending_notebooks: list[PendingNotebook] = field(default_factory=list)
     _processed_set: set[str] = field(default_factory=set, repr=False)
 
 
@@ -41,9 +55,11 @@ def load_state() -> State:
         return State()
     data = json.loads(STATE_FILE.read_text())
     articles = data.get("processed_articles", [])
+    pending = [PendingNotebook(**p) for p in data.get("pending_notebooks", [])]
     return State(
         last_run=data.get("last_run"),
         processed_articles=articles,
+        pending_notebooks=pending,
         _processed_set=set(articles),
     )
 

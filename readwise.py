@@ -18,6 +18,7 @@ class Article:
     author: str
     source_url: str | None
     summary: str
+    content: str | None
     updated_at: str
 
 
@@ -52,6 +53,7 @@ async def fetch_new_articles(
                         author=item.get("author") or "Unknown",
                         source_url=item.get("source_url"),
                         summary=item.get("summary") or "",
+                        content=item.get("content"),
                         updated_at=item.get("updated_at", ""),
                     )
                 )
