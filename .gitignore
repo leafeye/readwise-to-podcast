@@ -16,5 +16,11 @@ wheels/
 *.mp3
 *.mp4
 
+# Runtime state
+tmp/
+state.json
+episodes.json
+state.lock
+
 # macOS
 .DS_Store
