@@ -58,7 +58,7 @@ def validate_env() -> None:
     if missing:
         raise SystemExit(f"Missing environment variables: {', '.join(missing)}")
     if not shutil.which("ffmpeg"):
-        raise SystemExit("ffmpeg not found. Install it: brew install ffmpeg")
+        raise SystemExit("ffmpeg not found. Install it: apt install ffmpeg (Linux) or brew install ffmpeg (macOS)")
 
 
 def acquire_lock() -> int:
