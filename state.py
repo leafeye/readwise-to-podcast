@@ -13,6 +13,7 @@ EPISODES_FILE = Path("episodes.json")
 class State:
     last_run: str | None = None
     processed_articles: list[str] = field(default_factory=list)
+    _processed_set: set[str] = field(default_factory=set, repr=False)
 
 
 @dataclass
@@ -39,23 +40,28 @@ def load_state() -> State:
     if not STATE_FILE.exists():
         return State()
     data = json.loads(STATE_FILE.read_text())
+    articles = data.get("processed_articles", [])
     return State(
         last_run=data.get("last_run"),
-        processed_articles=data.get("processed_articles", []),
+        processed_articles=articles,
+        _processed_set=set(articles),
     )
 
 
 def save_state(state: State) -> None:
-    _atomic_write(STATE_FILE, asdict(state))
+    data = asdict(state)
+    data.pop("_processed_set", None)
+    _atomic_write(STATE_FILE, data)
 
 
 def is_processed(state: State, article_id: str) -> bool:
-    return article_id in state.processed_articles
+    return article_id in state._processed_set
 
 
 def mark_processed(state: State, article_id: str) -> None:
-    if article_id not in state.processed_articles:
+    if article_id not in state._processed_set:
         state.processed_articles.append(article_id)
+        state._processed_set.add(article_id)
 
 
 def load_episodes() -> list[Episode]:

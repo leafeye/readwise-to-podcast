@@ -27,9 +27,13 @@ async def generate_podcast(
         status = await client.artifacts.generate_audio(
             notebook.id, language=language
         )
-        await client.artifacts.wait_for_completion(
+        result = await client.artifacts.wait_for_completion(
             notebook.id, status.task_id, timeout=600.0
         )
+        if result.is_failed:
+            raise RuntimeError(
+                f"Audio generation failed: {result.error or 'unknown error'}"
+            )
 
         output_path = output_dir / f"{notebook.id}.mp4"
         await client.artifacts.download_audio(
@@ -44,7 +48,7 @@ def convert_to_mp3(mp4_path: Path) -> Path:
     """Convert mp4 to mp3 via ffmpeg. Raises on failure."""
     mp3_path = mp4_path.with_suffix(".mp3")
     subprocess.run(
-        ["ffmpeg", "-i", str(mp4_path), "-q:a", "2", str(mp3_path)],
+        ["ffmpeg", "-y", "-i", str(mp4_path), "-q:a", "2", str(mp3_path)],
         check=True,
         capture_output=True,
     )

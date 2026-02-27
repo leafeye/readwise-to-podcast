@@ -90,6 +90,7 @@ async def _run_pipeline():
     tmp_dir.mkdir(exist_ok=True)
 
     processed_count = 0
+    broke_early = False
 
     async with await NotebookLMClient.from_storage() as nblm:
         for i, article in enumerate(articles):
@@ -139,6 +140,7 @@ async def _run_pipeline():
                 logger.error(
                     "NotebookLM sessie verlopen. Run: notebooklm login"
                 )
+                broke_early = True
                 break
             except RateLimitError:
                 remaining = len(articles) - i
@@ -146,6 +148,7 @@ async def _run_pipeline():
                     f"NotebookLM quota bereikt. {remaining} artikelen "
                     "wachten op volgende run."
                 )
+                broke_early = True
                 break
             except Exception as e:
                 logger.error(f"✗ {article.title}: {e}")
@@ -159,8 +162,11 @@ async def _run_pipeline():
     if episodes:
         generate_and_upload_feed(r2, bucket, public_url, episodes)
 
-    state.last_run = datetime.now(timezone.utc).isoformat()
-    save_state(state)
+    # Only advance last_run if all articles were attempted.
+    # On early break, unprocessed articles must reappear in the next fetch.
+    if not broke_early:
+        state.last_run = datetime.now(timezone.utc).isoformat()
+        save_state(state)
     logger.info(f"Done. Processed {processed_count}/{len(articles)} articles.")
 
 
