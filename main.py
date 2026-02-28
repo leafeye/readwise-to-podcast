@@ -6,7 +6,7 @@ import fcntl
 import logging
 import os
 import shutil
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -33,6 +33,7 @@ from state import (
 )
 
 MAX_EPISODES_PER_RUN = 5
+LOOKBACK_DAYS = 7
 
 logging.basicConfig(
     level=logging.INFO,
@@ -227,8 +228,12 @@ async def _run_pipeline(limit: int, ignore_state: bool = False):
             nblm, state, episodes, r2, bucket, public_url, tmp_dir
         )
 
-        # 2. Fetch new articles
-        updated_after = None if ignore_state else state.last_run
+        # 2. Fetch new articles (with 7-day lookback for safety; is_processed dedupes)
+        if ignore_state or not state.last_run:
+            updated_after = None
+        else:
+            last_run_dt = datetime.fromisoformat(state.last_run)
+            updated_after = (last_run_dt - timedelta(days=LOOKBACK_DAYS)).isoformat()
         poll_time = datetime.now(timezone.utc).isoformat()
         articles = await fetch_new_articles(token, updated_after)
         articles = [a for a in articles if a.source_url]
