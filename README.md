@@ -144,9 +144,19 @@ sudo systemctl enable --now readwise-podcast.timer
 | `r2_feed.py` | R2 upload + RSS feed generation |
 | `state.py` | State management (processed articles, pending notebooks) |
 
-## Known limitations
+## NotebookLM quotas
 
-- **NotebookLM quotas:** 20 Audio Overviews per day with Gemini Advanced
+Audio Overview generation is rate-limited by Google. The `--limit` flag controls how many articles are processed per run.
+
+| Plan | Audio Overviews/day | Cost |
+|------|--------------------:|------|
+| Free | 3 | Free |
+| Pro (Google AI Pro) | 15 | $19.99/mo |
+| Ultra (Google AI Ultra) | 150 | $249.99/mo |
+
+With the default systemd timer (every 15 min, `--limit 1`), you'll use up to ~96 runs/day — but in practice far fewer, since runs without new articles are no-ops. At 1–3 articles/day the free tier is tight; Pro covers most use cases comfortably.
+
+## Known limitations
 - **Short articles:** NotebookLM may fail on articles under ~1500 words
 - **Auth expiry:** NotebookLM browser session expires periodically — re-run `notebooklm login`
 - **NotebookLM API stability:** relies on unofficial API via [notebooklm-py](https://github.com/teng-lin/notebooklm-py) — may break if Google changes internals
