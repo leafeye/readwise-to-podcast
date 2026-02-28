@@ -22,5 +22,8 @@ state.json
 episodes.json
 state.lock
 
+# Claude Code
+CLAUDE.md
+
 # macOS
 .DS_Store
