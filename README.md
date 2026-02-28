@@ -4,11 +4,7 @@ Automatically turns saved [Readwise Reader](https://readwise.io/read) articles i
 
 ## How it works
 
-```
-Readwise Reader          Python script (cron)         Cloudflare R2        Pocket Casts
- save article  ──────►  fetch → NotebookLM  ──────►  MP3 + RSS feed  ──►  new episode
-                         generate podcast               (free tier)        appears
-```
+![Architecture](docs/architecture.png)
 
 1. You save an article in Readwise Reader
 2. Every 15 minutes, the script polls Readwise for new articles
