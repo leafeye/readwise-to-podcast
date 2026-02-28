@@ -21,6 +21,8 @@ This project is set up for Dutch, but NotebookLM supports [80+ languages](https:
 ## Features
 
 - **Content-first:** sends article text directly to NotebookLM (more reliable than URL scraping, avoids paywalls)
+- **Rich show notes:** episode descriptions include author, summary, and a link to the original article (HTML for podcast apps, plain-text fallback for Apple Podcasts)
+- **Feed artwork:** podcast cover image (uploaded to R2, referenced via `<itunes:image>`)
 - **Archive.is support:** extracts original URLs as fallback
 - **Crash-safe:** tracks pending notebooks and resumes on next run
 - **Queue-based:** processes one article per run to stay within NotebookLM quotas (20/day)
@@ -141,7 +143,7 @@ sudo systemctl enable --now readwise-podcast.timer
 | `main.py` | Orchestration, CLI, pipeline loop |
 | `readwise.py` | Readwise Reader API v3 client |
 | `podcast.py` | NotebookLM integration (create, generate, download) |
-| `r2_feed.py` | R2 upload + RSS feed generation |
+| `r2_feed.py` | R2 upload + RSS feed generation (with show notes and artwork) |
 | `state.py` | State management (processed articles, pending notebooks) |
 
 ## NotebookLM quotas
