@@ -20,7 +20,7 @@ This project is set up for Dutch, but NotebookLM supports [80+ languages](https:
 
 ## Features
 
-- **Content-first:** sends article text directly to NotebookLM (more reliable than URL scraping, avoids paywalls)
+- **Content-first:** sends article text directly to NotebookLM (more reliable than URL scraping)
 - **Rich show notes:** episode descriptions include author, summary, and a link to the original article (HTML for podcast apps, plain-text fallback for Apple Podcasts)
 - **Feed artwork:** podcast cover image (uploaded to R2, referenced via `<itunes:image>`)
 - **Archive.is support:** extracts original URLs as fallback
