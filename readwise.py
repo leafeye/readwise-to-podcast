@@ -46,10 +46,12 @@ async def fetch_new_articles(
             data = response.json()
 
             for item in data.get("results", []):
+                raw_title = item.get("title") or "Untitled"
+                title = raw_title.split("\n", 1)[0].strip() or "Untitled"
                 articles.append(
                     Article(
                         id=item["id"],
-                        title=item.get("title") or "Untitled",
+                        title=title,
                         author=item.get("author") or "Unknown",
                         source_url=item.get("source_url"),
                         summary=item.get("summary") or "",
