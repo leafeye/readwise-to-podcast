@@ -127,7 +127,6 @@ async def _process_pending(
     episodes: list[Episode],
     r2,
     bucket: str,
-    public_url: str,
     tmp_dir: Path,
 ) -> int:
     """Check pending notebooks for completed audio. Returns number completed."""
@@ -225,7 +224,7 @@ async def _run_pipeline(limit: int, ignore_state: bool = False):
     async with await NotebookLMClient.from_storage() as nblm:
         # 1. Check pending notebooks from previous runs
         pending_completed = await _process_pending(
-            nblm, state, episodes, r2, bucket, public_url, tmp_dir
+            nblm, state, episodes, r2, bucket, tmp_dir
         )
 
         # 2. Fetch new articles (with 7-day lookback for safety; is_processed dedupes)

@@ -37,4 +37,4 @@ Draait op VPS via systemd timer (elke 15 min, `--limit 1`).
 - `add_text()` is betrouwbaarder dan `add_url()` (geen scraping/paywall issues)
 - Archive.is URLs: originele URL extraheren als fallback
 - Auth verloopt: periodiek `notebooklm login` op VPS
-- **mp3_url in episodes.json is hardcoded bij creatie.** Als `R2_PUBLIC_URL` in .env fout staat, krijgen episodes foute URLs die niet vanzelf herstellen. Fix: episodes.json fixen + feed opnieuw genereren. Structurele fix (TODO): sla alleen relatieve paden op, bouw volledige URL bij feed-generatie.
+- episodes.json slaat relatieve paden op (`r2_key`), volledige URL wordt bij feed-generatie opgebouwd uit `R2_PUBLIC_URL`. Wijzig .env → feed regenereert automatisch met correcte URLs.
