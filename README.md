@@ -27,6 +27,7 @@ This project is set up for Dutch, but NotebookLM supports [80+ languages](https:
 - **Crash-safe:** tracks pending notebooks and resumes on next run
 - **Queue-based:** processes one article per run to stay within NotebookLM quotas (20/day)
 - **State management:** deduplication, processed article tracking, 7-day lookback window
+- **Auto-cleanup:** old episodes are removed from R2 after 180 days, stale state entries after 60 days (configurable)
 
 ## Requirements
 
@@ -95,7 +96,19 @@ uv run python main.py
 
 # Test with the 3 most recent articles (ignores state)
 uv run python main.py --recent 3
+
+# Disable automatic cleanup
+uv run python main.py --cleanup-state-days 0 --cleanup-episodes-days 0
 ```
+
+#### Cleanup flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--cleanup-state-days N` | 60 | Remove processed article entries older than N days from state. `0` = disable. |
+| `--cleanup-episodes-days N` | 180 | Remove episodes older than N days from R2. `0` = disable. |
+
+Cleanup runs automatically at the start of every pipeline run, including silent runs without new articles. The defaults keep state lean without any configuration.
 
 ### 6. Subscribe
 
@@ -146,7 +159,7 @@ sudo systemctl enable --now readwise-podcast.timer
 | `readwise.py` | Readwise Reader API v3 client |
 | `podcast.py` | NotebookLM integration (create, generate, download) |
 | `r2_feed.py` | R2 upload + RSS feed generation (with show notes and artwork) |
-| `state.py` | State management (processed articles, pending notebooks) |
+| `state.py` | State management (processed articles, pending notebooks, cleanup) |
 
 ## NotebookLM quotas
 

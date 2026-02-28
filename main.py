@@ -19,11 +19,12 @@ from podcast import (
     start_podcast,
     try_download_podcast,
 )
-from r2_feed import generate_and_upload_feed, get_r2_client, upload_file
+from r2_feed import delete_file, generate_and_upload_feed, get_r2_client, upload_file
 from readwise import fetch_new_articles
 from state import (
     Episode,
     PendingNotebook,
+    cleanup_processed_articles,
     is_processed,
     load_episodes,
     load_state,
@@ -87,6 +88,14 @@ def parse_args() -> argparse.Namespace:
         "--recent", type=int, metavar="N",
         help="Ignore state and process the N most recent Readwise articles",
     )
+    parser.add_argument(
+        "--cleanup-state-days", type=int, default=60,
+        help="Remove processed_articles older than N days (default: 60, 0 = disable)",
+    )
+    parser.add_argument(
+        "--cleanup-episodes-days", type=int, default=180,
+        help="Remove episodes older than N days from R2 (default: 180, 0 = disable)",
+    )
     return parser.parse_args()
 
 
@@ -107,6 +116,8 @@ async def main():
         await _run_pipeline(
             limit=args.recent or args.limit,
             ignore_state=bool(args.recent),
+            cleanup_state_days=args.cleanup_state_days,
+            cleanup_episodes_days=args.cleanup_episodes_days,
         )
     finally:
         fcntl.flock(lock_fd, fcntl.LOCK_UN)
@@ -202,7 +213,36 @@ async def _process_pending(
     return completed
 
 
-async def _run_pipeline(limit: int, ignore_state: bool = False):
+def _cleanup_old_episodes(
+    episodes: list[Episode], r2, bucket: str, max_age_days: int
+) -> tuple[list[Episode], int]:
+    """Delete episodes older than max_age_days from R2.
+
+    Returns (remaining_episodes, removed_count).
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+    keep = []
+    removed = 0
+    for ep in episodes:
+        if datetime.fromisoformat(ep.pub_date) < cutoff:
+            if delete_file(r2, bucket, ep.r2_key):
+                removed += 1
+            else:
+                keep.append(ep)  # R2 delete failed — retry next run
+        else:
+            keep.append(ep)
+    if removed:
+        logger.info(f"Cleaned up {removed} old episode(s) from R2")
+        save_episodes(keep)
+    return keep, removed
+
+
+async def _run_pipeline(
+    limit: int,
+    ignore_state: bool = False,
+    cleanup_state_days: int = 60,
+    cleanup_episodes_days: int = 180,
+):
     state = load_state()
     episodes = load_episodes()
     token = os.environ["READWISE_TOKEN"]
@@ -220,6 +260,13 @@ async def _run_pipeline(limit: int, ignore_state: bool = False):
     public_url = os.environ["R2_PUBLIC_URL"].rstrip("/")
     tmp_dir = Path("tmp")
     tmp_dir.mkdir(exist_ok=True)
+
+    # Cleanup old data before processing
+    episodes_cleaned = 0
+    if cleanup_episodes_days > 0:
+        episodes, episodes_cleaned = _cleanup_old_episodes(episodes, r2, bucket, cleanup_episodes_days)
+    if cleanup_state_days > 0 and cleanup_processed_articles(state, cleanup_state_days) > 0:
+        save_state(state)
 
     async with await NotebookLMClient.from_storage() as nblm:
         # 1. Check pending notebooks from previous runs
@@ -245,7 +292,7 @@ async def _run_pipeline(limit: int, ignore_state: bool = False):
             logger.info(f"Found {len(articles)} new articles with source URLs")
 
         if not articles:
-            if episodes and pending_completed:
+            if episodes and (pending_completed or episodes_cleaned):
                 generate_and_upload_feed(r2, bucket, public_url, episodes)
             if not state.pending_notebooks:
                 state.last_run = poll_time

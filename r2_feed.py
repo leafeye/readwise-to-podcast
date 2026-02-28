@@ -43,6 +43,16 @@ def upload_file(
     )
 
 
+def delete_file(client, bucket: str, r2_key: str) -> bool:
+    """Delete a file from R2. Returns True on success, False on error."""
+    try:
+        client.delete_object(Bucket=bucket, Key=r2_key)
+        return True
+    except ClientError as e:
+        logger.warning(f"Failed to delete {r2_key} from R2: {e}")
+        return False
+
+
 def _artwork_exists(client, bucket: str) -> bool:
     """Check if podcast artwork exists on R2."""
     try:

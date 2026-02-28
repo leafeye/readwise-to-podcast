@@ -1,9 +1,13 @@
 """State and episode management with atomic JSON writes."""
 
 import json
+import logging
 import os
 from dataclasses import asdict, dataclass, field
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 STATE_FILE = Path("state.json")
 EPISODES_FILE = Path("episodes.json")
@@ -25,9 +29,8 @@ class PendingNotebook:
 @dataclass
 class State:
     last_run: str | None = None
-    processed_articles: list[str] = field(default_factory=list)
+    processed_articles: dict[str, str] = field(default_factory=dict)
     pending_notebooks: list[PendingNotebook] = field(default_factory=list)
-    _processed_set: set[str] = field(default_factory=set, repr=False)
 
 
 @dataclass
@@ -56,28 +59,44 @@ def load_state() -> State:
     data = json.loads(STATE_FILE.read_text())
     articles = data.get("processed_articles", [])
     pending = [PendingNotebook(**p) for p in data.get("pending_notebooks", [])]
+
+    # Migrate list[str] → dict[str, str] (article_id → timestamp)
+    if isinstance(articles, list):
+        now = datetime.now(timezone.utc).isoformat()
+        articles = {aid: now for aid in articles}
+
     return State(
         last_run=data.get("last_run"),
         processed_articles=articles,
         pending_notebooks=pending,
-        _processed_set=set(articles),
     )
 
 
 def save_state(state: State) -> None:
-    data = asdict(state)
-    data.pop("_processed_set", None)
-    _atomic_write(STATE_FILE, data)
+    _atomic_write(STATE_FILE, asdict(state))
 
 
 def is_processed(state: State, article_id: str) -> bool:
-    return article_id in state._processed_set
+    return article_id in state.processed_articles
 
 
 def mark_processed(state: State, article_id: str) -> None:
-    if article_id not in state._processed_set:
-        state.processed_articles.append(article_id)
-        state._processed_set.add(article_id)
+    if article_id not in state.processed_articles:
+        state.processed_articles[article_id] = datetime.now(timezone.utc).isoformat()
+
+
+def cleanup_processed_articles(state: State, max_age_days: int) -> int:
+    """Remove processed_articles entries older than max_age_days. Returns count removed."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+    to_remove = [
+        aid for aid, ts in state.processed_articles.items()
+        if datetime.fromisoformat(ts) < cutoff
+    ]
+    for aid in to_remove:
+        del state.processed_articles[aid]
+    if to_remove:
+        logger.info(f"Cleaned up {len(to_remove)} old processed article(s) from state")
+    return len(to_remove)
 
 
 def _migrate_mp3_url(item: dict) -> dict:
