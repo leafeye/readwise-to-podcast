@@ -1,0 +1,163 @@
+# Readwise to Podcast
+
+Automatically turns saved [Readwise Reader](https://readwise.io/read) articles into Dutch-language podcasts using [NotebookLM](https://notebooklm.google.com/), and publishes them as a private podcast feed you can subscribe to in any podcast app.
+
+## How it works
+
+```
+Readwise Reader          Python script (cron)         Cloudflare R2        Pocket Casts
+ save article  ──────►  fetch → NotebookLM  ──────►  MP3 + RSS feed  ──►  new episode
+                         generate podcast               (free tier)        appears
+```
+
+1. You save an article in Readwise Reader
+2. Every 15 minutes, the script polls Readwise for new articles
+3. For each article, it creates a NotebookLM notebook, adds the article content, and generates a Dutch Audio Overview
+4. The audio is downloaded, converted to MP3, and uploaded to Cloudflare R2
+5. The RSS feed is updated — your podcast app picks it up automatically
+
+**Total latency:** ~20–50 minutes from saving to listening.
+
+## Features
+
+- **Content-first:** sends article text directly to NotebookLM (more reliable than URL scraping, avoids paywalls)
+- **Archive.is support:** extracts original URLs as fallback
+- **Crash-safe:** tracks pending notebooks and resumes on next run
+- **Queue-based:** processes one article per run to stay within NotebookLM quotas (20/day)
+- **State management:** deduplication, processed article tracking, 7-day lookback window
+
+## Requirements
+
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/) (package manager)
+- [ffmpeg](https://ffmpeg.org/) (audio conversion)
+- A Google account with [Gemini Advanced](https://gemini.google.com/) (for NotebookLM Audio Overviews)
+- A [Readwise Reader](https://readwise.io/) account + API token
+- A [Cloudflare R2](https://developers.cloudflare.com/r2/) bucket (free tier: 10 GB)
+
+## Setup
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/leafeye/readwise-to-podcast.git
+cd readwise-to-podcast
+uv sync
+playwright install --with-deps chromium
+```
+
+### 2. Authenticate with NotebookLM
+
+```bash
+uv run notebooklm login
+```
+
+This opens a browser for Google sign-in and saves the session to `~/.notebooklm/storage_state.json`.
+
+### 3. Configure environment
+
+```bash
+cp .env.example .env
+# Edit .env with your values
+```
+
+Required variables:
+
+| Variable | Description |
+|----------|-------------|
+| `READWISE_TOKEN` | Readwise API token ([get it here](https://readwise.io/access_token)) |
+| `R2_ACCOUNT_ID` | Cloudflare account ID |
+| `R2_ACCESS_KEY_ID` | R2 API access key |
+| `R2_SECRET_ACCESS_KEY` | R2 API secret key |
+| `R2_BUCKET_NAME` | R2 bucket name |
+| `R2_PUBLIC_URL` | Public URL of your R2 bucket (e.g. `https://pub-abc123.r2.dev`) |
+
+### 4. Initialize state
+
+```bash
+uv run python main.py --init
+```
+
+This sets the starting point to "now" — only articles saved after this point will be processed.
+
+### 5. Run
+
+```bash
+# Process the most recent article
+uv run python main.py --limit 1
+
+# Process up to 5 new articles
+uv run python main.py
+
+# Test with the 3 most recent articles (ignores state)
+uv run python main.py --recent 3
+```
+
+### 6. Subscribe
+
+Add the RSS feed URL (`$R2_PUBLIC_URL/feed.xml`) to your podcast app.
+
+## Deploying with systemd
+
+For automated runs, set up a systemd timer:
+
+```ini
+# /etc/systemd/system/readwise-podcast.service
+[Unit]
+Description=Readwise to Podcast pipeline
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=your-user
+WorkingDirectory=/path/to/readwise-to-podcast
+ExecStart=/path/to/uv run python main.py --limit 1
+EnvironmentFile=/path/to/readwise-to-podcast/.env
+MemoryMax=1.5G
+TimeoutStartSec=2400
+```
+
+```ini
+# /etc/systemd/system/readwise-podcast.timer
+[Unit]
+Description=Run Readwise to Podcast every 15 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+
+[Install]
+WantedBy=timers.target
+```
+
+```bash
+sudo systemctl enable --now readwise-podcast.timer
+```
+
+## Project structure
+
+| File | Purpose |
+|------|---------|
+| `main.py` | Orchestration, CLI, pipeline loop |
+| `readwise.py` | Readwise Reader API v3 client |
+| `podcast.py` | NotebookLM integration (create, generate, download) |
+| `r2_feed.py` | R2 upload + RSS feed generation |
+| `state.py` | State management (processed articles, pending notebooks) |
+
+## Known limitations
+
+- **NotebookLM quotas:** 20 Audio Overviews per day with Gemini Advanced
+- **Short articles:** NotebookLM may fail on articles under ~1500 words
+- **Auth expiry:** NotebookLM browser session expires periodically — re-run `notebooklm login`
+- **NotebookLM API stability:** relies on unofficial API via [notebooklm-py](https://github.com/teng-lin/notebooklm-py) — may break if Google changes internals
+
+## Credits
+
+Built with:
+- [notebooklm-py](https://github.com/teng-lin/notebooklm-py) — unofficial NotebookLM Python client
+- [python-feedgen](https://github.com/lkiesow/python-feedgen) — RSS feed generation
+- [Cloudflare R2](https://developers.cloudflare.com/r2/) — object storage
+
+## License
+
+MIT
