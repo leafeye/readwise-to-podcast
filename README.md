@@ -1,6 +1,8 @@
 # Readwise to Podcast
 
-Automatically turns saved [Readwise Reader](https://readwise.io/read) articles into Dutch-language podcasts using [NotebookLM](https://notebooklm.google.com/), and publishes them as a private podcast feed you can subscribe to in any podcast app.
+Automatically turns saved [Readwise Reader](https://readwise.io/read) articles into podcasts using [NotebookLM](https://notebooklm.google.com/), and publishes them as a private podcast feed you can subscribe to in any podcast app.
+
+Currently configured for Dutch, but easily changed to any of NotebookLM's [80+ supported languages](https://support.google.com/notebooklm/answer/15738129) — just change the `language` parameter in `podcast.py`.
 
 ## How it works
 
