@@ -1,8 +1,10 @@
 # Readwise to Podcast
 
-Automatically turns saved [Readwise Reader](https://readwise.io/read) articles into podcasts using [NotebookLM](https://notebooklm.google.com/), and publishes them as a private podcast feed you can subscribe to in any podcast app.
+You save articles. You never read them. You do listen to podcasts.
 
-Why NotebookLM? It produces the most natural-sounding AI podcasts available — complete with spontaneous interruptions, laughter, and filler words that make it feel like a real conversation. No other TTS pipeline comes close.
+This project bridges that gap — it automatically turns your [Readwise Reader](https://readwise.io/read) articles into podcasts using [NotebookLM](https://notebooklm.google.com/) and publishes them as a private feed in your podcast app. Save an article, and it shows up as an episode.
+
+Why NotebookLM? It produces the most natural-sounding AI podcasts available — spontaneous interruptions, laughter, filler words. It feels like two people actually discussing your article. No other TTS pipeline comes close.
 
 Currently configured for Dutch, but easily changed to any of NotebookLM's [80+ supported languages](https://support.google.com/notebooklm/answer/15738129) — just change the `language` parameter in `podcast.py`.
 
