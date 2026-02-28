@@ -30,7 +30,7 @@ async def fetch_new_articles(
     Handles pagination via nextPageCursor and rate limiting (429 + Retry-After).
     """
     articles: list[Article] = []
-    params: dict = {"category": "article"}
+    params: dict = {"category": "article", "withHtmlContent": "true"}
     if updated_after:
         params["updatedAfter"] = updated_after
 
@@ -53,7 +53,7 @@ async def fetch_new_articles(
                         author=item.get("author") or "Unknown",
                         source_url=item.get("source_url"),
                         summary=item.get("summary") or "",
-                        content=item.get("content"),
+                        content=item.get("html_content"),
                         updated_at=item.get("updated_at", ""),
                     )
                 )

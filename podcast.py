@@ -16,6 +16,14 @@ POLL_TIMEOUT = 20 * 60    # 20 min polling after initial wait (30 min total)
 NOTEBOOK_MAX_AGE = 60 * 60  # clean up after 1 hour
 
 
+def _extract_original_url(url: str) -> str | None:
+    """Extract original URL from archive.is links."""
+    match = re.match(r"https?://archive\.is/[^/]+/(https?://.+)", url)
+    if match:
+        return match.group(1)
+    return None
+
+
 def _strip_html(html: str) -> str:
     """Strip HTML tags to plain text."""
     text = re.sub(r"<[^>]+>", " ", html)
@@ -44,7 +52,12 @@ async def start_podcast(
             )
             logger.info("Source added via text (Readwise content)")
         else:
-            await client.sources.add_url(notebook.id, source_url, wait=True)
+            # Try original URL if source is archive.is (NotebookLM may block these)
+            original_url = _extract_original_url(source_url)
+            url_to_add = original_url or source_url
+            if original_url:
+                logger.info(f"Using original URL instead of archive.is: {original_url}")
+            await client.sources.add_url(notebook.id, url_to_add, wait=True)
             logger.info("Source added via URL (no Readwise content available)")
         status = await client.artifacts.generate_audio(notebook.id, language=language)
     except Exception:
