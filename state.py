@@ -35,7 +35,7 @@ class Episode:
     article_id: str
     title: str
     author: str
-    mp3_url: str
+    r2_key: str
     description: str
     source_url: str
     pub_date: str
@@ -80,6 +80,15 @@ def mark_processed(state: State, article_id: str) -> None:
         state._processed_set.add(article_id)
 
 
+def _migrate_mp3_url(item: dict) -> dict:
+    """Migrate old mp3_url (full URL) to r2_key (relative path)."""
+    if "mp3_url" in item and "r2_key" not in item:
+        url = item.pop("mp3_url")
+        # Extract relative path: "https://pub-xxx.r2.dev/episodes/abc.mp3" → "episodes/abc.mp3"
+        item["r2_key"] = url.split("/", 3)[-1] if "/" in url else url
+    return item
+
+
 def load_episodes() -> list[Episode]:
     if not EPISODES_FILE.exists():
         return []
@@ -87,7 +96,7 @@ def load_episodes() -> list[Episode]:
     # Dedup on article_id (keep last occurrence)
     seen: dict[str, Episode] = {}
     for item in data:
-        ep = Episode(**item)
+        ep = Episode(**_migrate_mp3_url(item))
         seen[ep.article_id] = ep
     return list(seen.values())
 

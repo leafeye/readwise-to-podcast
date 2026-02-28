@@ -63,13 +63,14 @@ def generate_and_upload_feed(
 
     # Add episodes in reverse chronological order
     for ep in sorted(episodes, key=lambda e: e.pub_date, reverse=True):
+        mp3_url = f"{public_url}/{ep.r2_key}"
         fe = fg.add_entry()
-        fe.id(ep.mp3_url)
-        fe.link(href=ep.source_url or ep.mp3_url)
+        fe.id(mp3_url)
+        fe.link(href=ep.source_url or mp3_url)
         fe.title(ep.title)
         fe.description(ep.description or f"Podcast van: {ep.title}")
         fe.published(datetime.fromisoformat(ep.pub_date).replace(tzinfo=timezone.utc))
-        fe.enclosure(ep.mp3_url, str(ep.file_size), "audio/mpeg")
+        fe.enclosure(mp3_url, str(ep.file_size), "audio/mpeg")
         if ep.author:
             fe.podcast.itunes_author(ep.author)
 
