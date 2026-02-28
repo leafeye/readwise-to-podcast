@@ -39,7 +39,7 @@ This project is set up for Dutch, but NotebookLM supports [80+ languages](https:
 
 ## Setup
 
-> **Tip:** If setup isn't your thing, just ask [Claude Code](https://claude.ai/claude-code) to do it for you. It built this project, so it knows its way around. 😉
+> **Tip:** If setup isn't your thing, just ask [Claude Code](https://claude.ai/claude-code) to do it for you. It built this project, so it knows its way around — including deploying it to a VPS with systemd timers. 😉
 
 ### 1. Clone and install
 
