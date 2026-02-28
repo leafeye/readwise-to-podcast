@@ -39,7 +39,7 @@ This project is set up for Dutch, but NotebookLM supports [80+ languages](https:
 
 ## Setup
 
-> **Tip:** This project was built with [Claude Code](https://claude.ai/claude-code). You can ask it to set everything up for you.
+> **Tip:** If setup isn't your thing, just ask [Claude Code](https://claude.ai/claude-code) to do it for you. It built this project, so it knows its way around. 😉
 
 ### 1. Clone and install
 
