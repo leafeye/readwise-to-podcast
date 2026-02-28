@@ -229,6 +229,7 @@ async def _run_pipeline(limit: int, ignore_state: bool = False):
 
         # 2. Fetch new articles
         updated_after = None if ignore_state else state.last_run
+        poll_time = datetime.now(timezone.utc).isoformat()
         articles = await fetch_new_articles(token, updated_after)
         articles = [a for a in articles if a.source_url]
 
@@ -243,7 +244,7 @@ async def _run_pipeline(limit: int, ignore_state: bool = False):
             if episodes and pending_completed:
                 generate_and_upload_feed(r2, bucket, public_url, episodes)
             if not state.pending_notebooks:
-                state.last_run = datetime.now(timezone.utc).isoformat()
+                state.last_run = poll_time
             save_state(state)
             return
 
@@ -358,7 +359,7 @@ async def _run_pipeline(limit: int, ignore_state: bool = False):
 
     # Only advance last_run if all done and no pending
     if not broke_early and not state.pending_notebooks:
-        state.last_run = datetime.now(timezone.utc).isoformat()
+        state.last_run = poll_time
         save_state(state)
 
     total = processed_count + pending_completed
