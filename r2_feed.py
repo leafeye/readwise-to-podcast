@@ -1,11 +1,13 @@
 """Cloudflare R2 upload and RSS feed generation."""
 
+import html
 import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 import boto3
+from botocore.exceptions import ClientError
 from feedgen.feed import FeedGenerator
 
 from state import Episode
@@ -13,6 +15,7 @@ from state import Episode
 logger = logging.getLogger(__name__)
 
 R2_FEED_KEY = "feed.xml"
+R2_ARTWORK_KEY = "artwork.jpg"
 
 
 def get_r2_client():
@@ -40,6 +43,43 @@ def upload_file(
     )
 
 
+def _artwork_exists(client, bucket: str) -> bool:
+    """Check if podcast artwork exists on R2."""
+    try:
+        client.head_object(Bucket=bucket, Key=R2_ARTWORK_KEY)
+        return True
+    except ClientError:
+        return False
+
+
+def _build_show_notes(ep: Episode) -> tuple[str, str]:
+    """Build HTML and plain-text show notes from episode metadata.
+
+    Returns (html_description, plain_text_summary).
+    """
+    summary = html.escape(ep.description or f"Podcast van: {ep.title}")
+
+    # HTML version (for <description>)
+    html_parts = [f"<p>{summary}</p>"]
+    if ep.author and ep.author != "Unknown":
+        html_parts.append(f"<p>Auteur: {html.escape(ep.author)}</p>")
+    if ep.source_url:
+        html_parts.append(
+            f'<p><a href="{html.escape(ep.source_url)}">Lees het originele artikel</a></p>'
+        )
+    html_desc = "\n".join(html_parts)
+
+    # Plain-text version (for <itunes:summary>)
+    text_parts = [ep.description or f"Podcast van: {ep.title}"]
+    if ep.author and ep.author != "Unknown":
+        text_parts.append(f"Auteur: {ep.author}")
+    if ep.source_url:
+        text_parts.append(f"Bron: {ep.source_url}")
+    plain_text = "\n".join(text_parts)
+
+    return html_desc, plain_text
+
+
 def generate_and_upload_feed(
     client, bucket: str, public_url: str, episodes: list[Episode]
 ) -> None:
@@ -61,6 +101,15 @@ def generate_and_upload_feed(
     fg.podcast.itunes_category("Technology")
     fg.podcast.itunes_explicit("no")
 
+    # Artwork (optional — only added if the file exists on R2)
+    if _artwork_exists(client, bucket):
+        artwork_url = f"{public_url}/{R2_ARTWORK_KEY}"
+        fg.podcast.itunes_image(artwork_url)
+        fg.image(url=artwork_url, title="Readwise Podcast", link=feed_url)
+        logger.info("Artwork found, adding to feed")
+    else:
+        logger.info("No artwork on R2, skipping artwork tags")
+
     # Add episodes in reverse chronological order
     for ep in sorted(episodes, key=lambda e: e.pub_date, reverse=True):
         mp3_url = f"{public_url}/{ep.r2_key}"
@@ -68,7 +117,11 @@ def generate_and_upload_feed(
         fe.id(mp3_url)
         fe.link(href=ep.source_url or mp3_url)
         fe.title(ep.title)
-        fe.description(ep.description or f"Podcast van: {ep.title}")
+
+        html_desc, plain_text = _build_show_notes(ep)
+        fe.description(html_desc)
+        fe.podcast.itunes_summary(plain_text)
+
         fe.published(datetime.fromisoformat(ep.pub_date).replace(tzinfo=timezone.utc))
         fe.enclosure(mp3_url, str(ep.file_size), "audio/mpeg")
         if ep.author:
